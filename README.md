@@ -8,6 +8,7 @@ This document outlines the process I followed to identify the first bad commit c
 
 - Operating System: Arch Linux 6.15.9-arch1-1
 - Neovim Version: Built from source with CMAKE_BUILD_TYPE=RelWithDebInfo
+- Tested repository is my own repo: https://github.com/liftctrl/nvim-highlight-error-repo
 - Affected Feature: Treesitter highlighting (Lua parsing)
 - Error Message: Invalid 'end_col': out of range (from nvim.treesitter.highlighter)
 
