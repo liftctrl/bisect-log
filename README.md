@@ -1,32 +1,105 @@
-# bisect-log
+# Neovim Treesitter Regression Testing: `git bisect` Process
 
-hwo to find bad commit
+## Overview
 
+This document outlines the process I followed to identify the first bad commit causing a regression in Neovim's Treesitter highlighting functionality. The issue was traced using the `git bisect` tool, which helped pinpoint the commit that introduced the bug.
+
+## Environment Details
+
+- Operating System: Arch Linux 6.15.9-arch1-1
+- Neovim Version: Built from source with CMAKE_BUILD_TYPE=RelWithDebInfo
+- Affected Feature: Treesitter highlighting (Lua parsing)
+- Error Message: Invalid 'end_col': out of range (from nvim.treesitter.highlighter)
+
+## Video
+
+I recorded test results for both "bad" and "good" commit ranges:
+
+- master_fixed.mp4
+- 37fb09c162_fixed.mp4
+- 0.11.3_error.mp4
+- a80bdf0d9b_error.mp4
+
+## Steps Taken
+
+### 1. Start Bisecting to Find the First Bad Commit
+
+The first step is to initiate the git bisect process by marking the known bad and good commits:
+
+```bash
 git bisect start
-git bisect bad v0.11.3
-git bisect good master
+git bisect bad v0.11.3  # Known bad version
+git bisect good master   # Known good version
+```
 
-- v0.11.3: 0.11.3_error.mp4  state: bad
+Then, I tested intermediate commits, and based on the results, the bisect process continued with each step narrowing down the possible commits:
 
-- master: master_fixed.mp4   state: good
 
-1. - a99c469e54: a99c469e54_fixed.mp4 state: good
+| Commit Hash | Result | Notes                  |
+| ----------- | ------ | ---------------------- |
+| a99c469e54  | ✅ Good | NVIM v0.11.0           |
+| dc87a0d80a  | ✅ Good |                        |
+| 36c6f488e4  | ✅ Good |                        |
+| db3b856779  | ✅ Good |                        |
+| 282f9fb816  | ❌ Bad  |                        |
+| 2d3517012a  | ✅ Good |                        |
+| 0f81af53b0  | ❌ Bad  |                        |
+| 37fb09c162  | ✅ Good |                        |
+| a80bdf0d9b  | ❌ Bad  | ➜ **First bad commit** |
 
-2. - dc87a0d80a: dc87a0d80a_fixed.mp4 state: good
 
-3. - 36c6f488e4: 36c6f488e4_fixed.mp4 state: good
+The first bad commit is identified as:
 
-4. - db3b856779: db3b856779_fixed.mp4 state: good
+```bash
+a80bdf0d9bd62762938e8de6bf2cd601f0689763
+fix(treesitter): ensure TSLuaTree is always immutable
+```
 
-5. - 282f9fb816: 282f9fb816_error.mp4 state: bad
 
-6. - 2d3517012a: 2d3517012a_fixed.mp4 state: good
+### 2. Reversed Bisecting to Find the Last Known Good Commit
 
-7. - 0f81af53b0: 0f81af53b0_error.mp4 state: bad
+After identifying the first bad commit, I reversed the bisecting process to find the last known good commit:
 
-8. - 37fb09c162: 37fb09c162_fixed.mp4 state: good
+```bash
+git bisect start
+git bisect good master       # Known good version
+git bisect bad a80bdf0d9bd   # First bad commit
+```
 
-9. - a80bdf0d9b: a80bdf0d9b_error.mp4 state: bad
+During this process, I tested the following commits:
+
+
+| Commit Hash | Result | Notes                        |
+| ----------- | ------ | ---------------------------- |
+| master      | ✅ Good |                              |
+| a99c469e54  | ✅ Good |                              |
+| 2b2a3449f7  | ✅ Good |                              |
+| 25a869a097  | ✅ Good |                              |
+| ce292026ea  | ✅ Good |                              |
+| 638bc951b2  | ✅ Good |                              |
+| bfcf541a9e  | ✅ Good |                              |
+| 41ceefe804  | ✅ Good |                              |
+| e732cbe36c  | ✅ Good |                              |
+| 37fb09c162  | ✅ Good | ➜ **Last known good commit** |
+
+
+## 3. Conclusion
+
+- First Bad Commit:
+  - a80bdf0d9bd62762938e8de6bf2cd601f0689763
+  - Commit message: fix(treesitter): ensure TSLuaTree is always immutable
+- Last Known Good Commit:
+  - 37fb09c162583fcff4350faad7e4a2bb60c60854
+  - Commit message: test(treesitter): test tree:root() is idempotent
+
+## Notes
+
+- Build Setup: The testing was done on Neovim built from source using CMAKE_BUILD_TYPE=RelWithDebInfo.
+- Test Process: Each commit was tested with consistent behavior checks to identify when the regression occurred.
+
+## Command
+
+### Find bad commit
 
 ```bash
 [yang@arch neovim]$ git bisect start
@@ -90,33 +163,7 @@ Date:   Thu Jun 26 19:45:28 2025 -0300
  3 files changed, 26 insertions(+), 20 deletions(-)
 ```
 
-how to find good commit
-
-git bisect start
-git bisect good master
-git bisect bad a80bdf0d9b
-
-- master: master_fixed.mp4 state: good
-
-1. - a99c469e54: a99c469e54_fixed.mp4 state: good
-
-2. - 2b2a3449f7: 2b2a3449f7_fixed.mp4 state: good
-
-3. - 25a869a097: 25a869a097_fixed.mp4 state: good
-
-4. - ce292026ea: ce292026ea_fixed.mp4 state: good
-
-5. - 638bc951b2: 638bc951b2_fixed.mp4 state: good
-
-6. - bfcf541a9e: bfcf541a9e_fixed.mp4 state: good
-
-7. - 41ceefe804: 41ceefe804_fixed.mp4 state: good
-
-8. - e732cbe36c: e732cbe36c_fixed.mp4 state: good
-
-9. - 37fb09c162: 37fb09c162_fixed.mp4 state: good
-
-- a80bdf0d9b: a80bdf0d9b_error.mp4 state: bad
+### Find good commit
 
 ```bash
 [yang@arch neovim]$ git bisect start
